@@ -3,6 +3,7 @@ package com.example.nautica
 import android.app.AlertDialog
 import android.location.Geocoder
 import android.os.Bundle
+import android.widget.SearchView
 import androidx.fragment.app.FragmentActivity
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -19,10 +20,15 @@ class HeatmapActivity : FragmentActivity(), OnMapReadyCallback, GoogleMap.OnMapC
 
     private lateinit var mMap: GoogleMap
     private lateinit var heatmapProvider: HeatmapTileProvider
+    private lateinit var searchView: SearchView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_heatmap) // Ensure this matches the XML filename
+
+        // Initialize the SearchView
+        searchView = findViewById(R.id.search_view)
+        setupSearchView()
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used
         val mapFragment = supportFragmentManager
@@ -107,6 +113,46 @@ class HeatmapActivity : FragmentActivity(), OnMapReadyCallback, GoogleMap.OnMapC
 
         // Move the camera to a central location
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(20.5937, 78.9629), 5f)) // Zoom level 5
+    }
+    private fun setupSearchView() {
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                query?.let {
+                    searchLocation(it)
+                }
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return false
+            }
+        })
+    }
+    private fun searchLocation(location: String) {
+        val geocoder = Geocoder(this, Locale.getDefault())
+        val addresses = geocoder.getFromLocationName(location, 1) // Returns a nullable list
+
+        // Safely check if the list is not null and has at least one address
+        if (addresses?.isNotEmpty() == true) {
+            val address = addresses[0] // Safe to access the first element
+
+            val latLng = LatLng(address.latitude, address.longitude)
+
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 12f)) // Zoom level as needed
+
+            // Optionally show a dialog with the search result
+            AlertDialog.Builder(this)
+                .setTitle("Search Result")
+                .setMessage("Found: ${address.featureName} \nLatitude: ${address.latitude} \nLongitude: ${address.longitude}")
+                .setPositiveButton("OK", null)
+                .show()
+        } else {
+            AlertDialog.Builder(this)
+                .setTitle("Search Result")
+                .setMessage("No results found for \"$location\"")
+                .setPositiveButton("OK", null)
+                .show()
+        }
     }
 
     override fun onMapClick(latLng: LatLng) {
